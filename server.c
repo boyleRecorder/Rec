@@ -109,7 +109,6 @@ static void setupUDPSocket(int port)
   openSockets[i].sa.sin_family = AF_INET;
   openSockets[i].sa.sin_addr.s_addr = INADDR_ANY;
   openSockets[i].sa.sin_port = htons(port);
-	printf("Found socket to open: %i - %i, %i\n",i,port,sock);
  
   if (-1 == bind(sock,(struct sockaddr *)&openSockets[i].sa, sizeof(struct sockaddr)))
   {
@@ -162,7 +161,7 @@ static void serverReceivedPacket(int sock)
 		case CREATE_CHANNEL:
 			printf("Received create_channel.\n");	  
 			setupUDPSocket(myHeader.portNumber);   
-                        callBacks.channelCreated(myHeader.portNumber);
+                        callBacks.channelCreated(myHeader.portNumber,myHeader.callID);
 			break;
 		case DELETE_CHANNEL:
 			printf("Received delete_channel.\n");	 

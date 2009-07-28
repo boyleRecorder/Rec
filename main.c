@@ -12,12 +12,11 @@ static void readSocketData(int sockNum)
 	char *buf[1024];
 
 	nbytes = recv(sockNum, buf, sizeof(buf), 0);
-//	printf("read %i bytes\n",nbytes);
 	if(stream != NULL)
 	fwrite(buf+12,sizeof(char),nbytes-12,stream);
 }
 
-static void channelCreated(int portNumber)
+static void channelCreated(int portNumber, char *callID)
 {
 	printf("a port has been opened: %i\n",portNumber);
 	char tmpNum[10];

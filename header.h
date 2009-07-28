@@ -27,7 +27,7 @@ struct callBacks
         /**
 	  Called when the channel is created.
 	*/
-	void (*channelCreated)(int portNum);
+	void (*channelCreated)(int portNum, char *);
 	
         /**
 	  Called when the channel is destroyed.
@@ -42,6 +42,7 @@ The message that is used in communication between the client and server.
 typedef struct
 {
 	char      buffer[256];
+	char      callID[256];
 	int       command;
 	int       portNumber;
 	int       codec;
