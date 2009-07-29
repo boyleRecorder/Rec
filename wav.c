@@ -9,7 +9,7 @@
 
 #include "wav.h"
 
-#define SECONDS 4 /* produce 10 seconds of noise */
+#define SECONDS 8 /* produce 10 seconds of noise */
 #define PI 3.14159265358979
 #define FREQUENCY 8000
 
@@ -59,11 +59,42 @@ void closeHeader(char *buffer, int length)
 	put_little_long(buffer+4,length+8+16+8);
 }
 
+FileSink *createWavSink(char *fileName, int channels)
+{
+	FileSink *sink = (FileSink*)malloc(sizeof(FileSink));
+        
+	writeHeader(sink->header,1);
+
+	sink->stream = fopen(fileName,"w");
+	sink->length = 0;
+	strcpy(sink->fileName,fileName);
+
+	return sink;
+}
+
+void closeWavSink(FileSink *sink)
+{
+	closeHeader(sink->header,sink->length);
+
+	fseek(sink->stream,0,0);
+	fwrite(sink->header,44,1,sink->stream);
+
+	fclose(sink->stream);
+	free(sink);
+}
+
+void writeData(FileSink *sink, char *data, int len)
+{
+	fwrite(data,len,1,sink->stream);
+	sink->length += len;
+}
+
+
 #ifdef DEBUG_TEST
 
 /* returns the number of bytes written. skips two bytes after
  * each write */
-static int fill_data(char *start, int frequency, int seconds)
+static int fill_data(char *start, int frequency, int seconds, int channels)
 {
 	int i, len=0;
 	int value;
@@ -71,7 +102,10 @@ static int fill_data(char *start, int frequency, int seconds)
 		value=32767.0 *
 			sin(2.0*PI*((double)(i))*(double)(frequency)/FREQUENCY);
 		put_little_short(start, value);
-		start += 4;
+		if(channels == 1)
+			start += 2;
+		else if(channels == 2)
+			start += 4;
 		len+=2;
 	}
 	printf("len: %i\n",len);
@@ -86,12 +120,15 @@ int main(void)
 	int len;
 	int fd;
 
-        writeHeader(buffer,2);
+	FileSink *sink = createWavSink("Hello.wav",1);
+        writeHeader(buffer,1);
 
-	len=fill_data(buffer+44,450,SECONDS); /* left channel, 450Hz sine */
-	len+=fill_data(buffer+44+2,452,SECONDS); /* right channel, 452Hz sine */
+	len=fill_data(buffer+44,523,SECONDS); /* left channel, 450Hz sine */
+	writeData(sink,buffer+44,len);
+//	len+=fill_data(buffer+44+2,452,SECONDS); /* right channel, 452Hz sine */
 	
 	closeHeader(buffer,len);
+	closeWavSink(sink);
 	
 	fd=open("test.wav", O_RDWR|O_CREAT, 0644);
 	write(fd,buffer,len+8+16+8+8);

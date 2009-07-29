@@ -3,8 +3,10 @@
 
 #include <stdio.h>
 #include <pthread.h>
+#include "wav.h"
+#include "g711.h"
 
-FILE *stream;
+FileSink *sink;
 
 static void readSocketData(int sockNum)
 {
@@ -12,8 +14,13 @@ static void readSocketData(int sockNum)
 	char *buf[1024];
 
 	nbytes = recv(sockNum, buf, sizeof(buf), 0);
-	if(stream != NULL)
-	fwrite(buf+12,sizeof(char),nbytes-12,stream);
+
+	short sData[160];
+
+	alaw_expand(160,(Byte*)buf+12,sData);
+
+	writeData(sink,(char*)sData,320);
+
 }
 
 static void channelCreated(int portNumber, char *callID)
@@ -22,15 +29,15 @@ static void channelCreated(int portNumber, char *callID)
 	char tmpNum[10];
 	sprintf(tmpNum,"%i",portNumber);
 	char file[64];
-	sprintf(file,"file_%s.pcm",tmpNum);
-	stream = fopen(file,"w");
+	sprintf(file,"file_%s.wav",tmpNum);
+
+	sink = createWavSink(file,1);
 }
 
 static void channelClosed(int portNumber)
 {
 	printf("A port has been closed: %i\n",portNumber);
-	if(stream != NULL)
-	fclose(stream);
+	closeWavSink(sink);
 }
 
 int main()

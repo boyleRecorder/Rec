@@ -1,8 +1,14 @@
 
-recServer: main.o server.o 
-	gcc -o recServer main.o server.o -lm -lpthread
+OBJS=main.o server.o wav.o g711.o
+
+recServer: $(OBJS) 
+	gcc -o recServer $(OBJS) -lm -lpthread
 
 
+g711.o : g711.c 
+	gcc -c g711.c
+wav.o : wav.c 
+	gcc -c wav.c
 server.o : server.c 
 	gcc -c server.c
 main.o : main.c 
@@ -10,5 +16,5 @@ main.o : main.c
 
 
 clean :
-	rm file1.o file2.o file3.o
+	rm *.o
 
