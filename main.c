@@ -3,12 +3,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
+#include <pthread.h>
 
 
 #include "header.h"
 
-#include <stdio.h>
-#include <pthread.h>
 #include "wav.h"
 #include "g711.h"
 
@@ -23,14 +22,13 @@ static FileNames *fileList;
 
 static void readSocketData(int sockNum)
 {
-	int len;
+	unsigned len;
 	int nbytes;
 	int portNum;
 	char *buf[1024];
 	short sData[160];
 	
 	struct sockaddr  address;
-	int connected;
 
 	// Read the data from the socket provided.
 	nbytes = recv(sockNum, buf, sizeof(buf), 0);
@@ -46,7 +44,6 @@ static void readSocketData(int sockNum)
 	else 
 		portNum= ntohs ( ((struct sockaddr_in *)&address)->sin_port );
 
-	printf("portNum: %i\n",portNum);
 
 	// Write the data from the socket to file.
 	writeData(fileList[MIN_PORT_NO - portNum].sink,(char*)sData,320);
@@ -55,13 +52,9 @@ static void readSocketData(int sockNum)
 
 static void channelCreated(int portNumber, char *callID)
 {
-	int i;
-	int num = MIN_PORT_NO - portNumber;
 	char file[64];
-
-	printf("a port has been opened: %i\n",portNumber);
-	printf("callID: %s\n",callID);
 	char tmpNum[10];
+	
 	sprintf(tmpNum,"%i",portNumber);
 	sprintf(file,"./recordings/%s_%s.wav",callID,tmpNum);
 
@@ -70,11 +63,10 @@ static void channelCreated(int portNumber, char *callID)
 
 static void channelClosed(int portNumber)
 {
-	printf("A port has been closed: %i\n",portNumber);
 	closeWavSink(fileList[MIN_PORT_NO-portNumber].sink);
 }
 
-static init()
+static void init()
 {
 	fileList = (FileNames*)malloc(sizeof(FileNames) * CHANNELS_PER_SERVER);
 }
@@ -83,6 +75,7 @@ int main()
 {
 	init();
 	pthread_t thread;
+	pthread_mutex_init(&mutex,NULL);
 	pthread_create(&thread,NULL,readCommands,NULL);
 	callBacks.readSocketData = readSocketData;
 	callBacks.channelCreated = channelCreated;

@@ -41,7 +41,6 @@ struct mySockets
         struct sockaddr_in sa; 
 }mySockets;
 
-static pthread_mutex_t mutex;
 
 static int selectList[CHANNELS_PER_SERVER];
 
@@ -52,9 +51,7 @@ static void addSockToSelectList(int sock)
 	{
 		if(selectList[i] == 0)
 		{
-			printf("Yeeha\n");
 			pthread_mutex_lock(&mutex);
-			printf("Adding socket: %i\n",sock);
 			selectList[i] = sock;
 			pthread_mutex_unlock(&mutex);
 			break;
@@ -203,6 +200,8 @@ static void runServer()
 void* readCommands(void *arg)
 {
 	runServer();
+
+	return NULL;
 }
 
 static void updateSockStruct()
@@ -242,6 +241,7 @@ void watchForIncommingData()
 	{
 
 		// Build the list of sockets to watch.
+		// Will this mutex become a bottle neck???
 		pthread_mutex_lock(&mutex);
 		FD_ZERO(&rfds);
 		updateSockStruct();
@@ -294,7 +294,7 @@ int requestChannel(int chanID, struct rtpServer* mediaServer, header *msg)
          server->h_length);
     serv_addr.sin_port = htons(COMMS_PORT);
     
-    if (connect(sockfd,&serv_addr,sizeof(serv_addr)) < 0) 
+    if (connect(sockfd,(const struct sockaddr*)&serv_addr,sizeof(serv_addr)) < 0) 
     {
         error("requestChannel ERROR connecting");
 	return CHANNEL_CREATION_FAILED;
@@ -354,7 +354,7 @@ int closeChannel(int chanID, struct rtpServer* mediaServer)
          server->h_length);
     serv_addr.sin_port = htons(COMMS_PORT);
     
-    if (connect(sockfd,&serv_addr,sizeof(serv_addr)) < 0) 
+    if (connect(sockfd,(const struct sockaddr*)&serv_addr,sizeof(serv_addr)) < 0) 
     {
         error("closeChannel ERROR connecting");
 	return CHANNEL_CREATION_FAILED;

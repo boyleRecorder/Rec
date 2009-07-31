@@ -1,21 +1,23 @@
-
+CC=gcc
 OPTS=-g -Wall
 OBJS=main.o server.o wav.o g711.o
+EXEC=recServer 
+LIBS= -lm -lpthread
 
 recServer: $(OBJS) 
-	gcc -o recServer $(OBJS) -lm -lpthread
+	$(CC) -o $(EXEC) $(OBJS) $(LIBS) 
 
 
 g711.o : g711.c 
-	gcc -c $(OPTS) g711.c
+	$(CC) -c $(OPTS) g711.c
 wav.o : wav.c 
-	gcc -c $(OPTS) wav.c
+	$(CC) -c $(OPTS) wav.c
 server.o : server.c 
-	gcc -c $(OPTS) server.c
+	$(CC) -c $(OPTS) server.c
 main.o : main.c 
-	gcc -c $(OPTS) main.c
+	$(CC) -c $(OPTS) main.c
 
 
 clean :
-	rm *.o
+	rm *.o *~ $(EXEC)
 

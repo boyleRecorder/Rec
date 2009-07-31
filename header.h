@@ -18,6 +18,8 @@ enum channelCreationMessages {CHANNEL_CREATED,CHANNEL_CREATION_FAILED};
 /** The commands that can be send to the recording server. */
 enum commands {CREATE_CHANNEL,DELETE_CHANNEL};
 
+pthread_mutex_t mutex;
+
 /**
 These are the server callbacks.
 */
