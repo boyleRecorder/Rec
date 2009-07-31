@@ -242,7 +242,8 @@ static int sip_worker_thread(void *arg);
 /* Create SDP for call */
 static pj_status_t create_sdp( pj_pool_t *pool,
 			       struct call *call,
-			       pjmedia_sdp_session **p_sdp);
+			       pjmedia_sdp_session **p_sdp,
+			       char *);
 
 /* Hangup call */
 static void hangup_call(unsigned index);
@@ -567,7 +568,7 @@ static pj_status_t make_call(const pj_str_t *dst_uri)
     }
 
     /* Create SDP */
-    create_sdp( dlg->pool, call, &sdp);
+    create_sdp( dlg->pool, call, &sdp,NULL);
 
     /* Create the INVITE session. */
     status = pjsip_inv_create_uac( dlg, sdp, 0, &call->inv);
@@ -616,6 +617,19 @@ static void process_incoming_call(pjsip_rx_data *rdata)
     pjmedia_sdp_session *sdp;
     pjsip_tx_data *tdata;
     pj_status_t status;
+
+    char callId[128];
+    memset(callId,0,128);
+    strncpy(callId,rdata->msg_info.cid->id.ptr,rdata->msg_info.cid->id.slen);
+
+    i = 0;
+    while(callId[i] != 0)
+    {
+	    if(callId[i] == '.')
+		    callId[i] = '_';
+	    i ++;
+    }
+    printf("XXXXXXXXX XXXXXXX %s\n",callId);//rdata->msg_info.cid->id.slen,rdata->msg_info.cid->id.ptr);
 
     /* Find free call slot */
     for (i=0; i<app.max_calls; ++i) {
@@ -670,7 +684,7 @@ static void process_incoming_call(pjsip_rx_data *rdata)
     }
 
     /* Create SDP */
-    create_sdp( dlg->pool, call, &sdp);
+    create_sdp( dlg->pool, call, &sdp,callId);
 
     /* Create UAS invite session */
     status = pjsip_inv_create_uas( dlg, rdata, sdp, 0, &call->inv);
@@ -1035,7 +1049,8 @@ static pj_status_t init_options(int argc, char *argv[])
  */
 static pj_status_t create_sdp( pj_pool_t *pool,
 			       struct call *call,
-			       pjmedia_sdp_session **p_sdp)
+			       pjmedia_sdp_session **p_sdp,
+			       char *callID)
 {
     pj_time_val tv;
     pjmedia_sdp_session *sdp;
@@ -1053,6 +1068,10 @@ static pj_status_t create_sdp( pj_pool_t *pool,
 
     header myHeader;
     strcpy(myHeader.buffer,"test message");
+    if(callID != NULL)
+    {
+	    strcpy(myHeader.callID,callID);
+    }
     myHeader.codec = G711A;
     myHeader.portNumber = getFreePort(call->server);
     printf("got free port: %i\n",myHeader.portNumber);

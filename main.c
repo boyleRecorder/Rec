@@ -1,3 +1,9 @@
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h> 
+
 
 #include "header.h"
 
@@ -6,42 +12,76 @@
 #include "wav.h"
 #include "g711.h"
 
-FileSink *sink;
+typedef struct
+{
+	FileSink  *sink;
+	int       portNumber;
+	char      chanID[128];
+}FileNames;
+
+static FileNames *fileList;
 
 static void readSocketData(int sockNum)
 {
+	int len;
 	int nbytes;
+	int portNum;
 	char *buf[1024];
+	short sData[160];
+	
+	struct sockaddr  address;
+	int connected;
 
+	// Read the data from the socket provided.
 	nbytes = recv(sockNum, buf, sizeof(buf), 0);
 
-	short sData[160];
 
+	// Convert the encoded data into raw PCM.
+	// TODO: The wav object should be able to handle PCMA
 	alaw_expand(160,(Byte*)buf+12,sData);
 
-	writeData(sink,(char*)sData,320);
+	len = sizeof ( address); 
+	if ( getsockname ( sockNum, &address, &len ) < 0 ) 
+		perror ( "getsockname" ); 
+	else 
+		portNum= ntohs ( ((struct sockaddr_in *)&address)->sin_port );
+
+	printf("portNum: %i\n",portNum);
+
+	// Write the data from the socket to file.
+	writeData(fileList[MIN_PORT_NO - portNum].sink,(char*)sData,320);
 
 }
 
 static void channelCreated(int portNumber, char *callID)
 {
+	int i;
+	int num = MIN_PORT_NO - portNumber;
+	char file[64];
+
 	printf("a port has been opened: %i\n",portNumber);
+	printf("callID: %s\n",callID);
 	char tmpNum[10];
 	sprintf(tmpNum,"%i",portNumber);
-	char file[64];
-	sprintf(file,"file_%s.wav",tmpNum);
+	sprintf(file,"./recordings/%s_%s.wav",callID,tmpNum);
 
-	sink = createWavSink(file,1);
+	fileList[MIN_PORT_NO - portNumber].sink  = createWavSink(file,1);
 }
 
 static void channelClosed(int portNumber)
 {
 	printf("A port has been closed: %i\n",portNumber);
-	closeWavSink(sink);
+	closeWavSink(fileList[MIN_PORT_NO-portNumber].sink);
+}
+
+static init()
+{
+	fileList = (FileNames*)malloc(sizeof(FileNames) * CHANNELS_PER_SERVER);
 }
 
 int main()
 {
+	init();
 	pthread_t thread;
 	pthread_create(&thread,NULL,readCommands,NULL);
 	callBacks.readSocketData = readSocketData;

@@ -8,13 +8,8 @@
 #include <string.h>
 
 #include <limits.h>
-#include <stdio.h>
 #include <string.h>
 
-#include <stdio.h>
-#include <sys/types.h> 
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <pthread.h>
 
 #include <sys/time.h>
@@ -25,8 +20,6 @@
 #include <errno.h>
 
 #include "header.h"
-
-#define BUFLEN 512
 
 #define COMMAND_BACKLOG	10
 
@@ -90,8 +83,6 @@ static struct mySockets openSockets[CHANNELS_PER_SERVER];
 static void setupUDPSocket(int port)
 {
   int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  char buffer[1024];
-  size_t fromlen, recsize;
   printf("created udp sock: %i\n",sock);
 
   int i;
@@ -176,7 +167,8 @@ This is the TCP server which reads incomming commands.
 */
 static void runServer()
 {
-	int sockfd, newsockfd, portno, clilen, pid;
+	int sockfd, newsockfd, portno ;
+	unsigned clilen;
 	struct sockaddr_in serv_addr, cli_addr;
 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -278,7 +270,6 @@ void watchForIncommingData()
 
 int requestChannel(int chanID, struct rtpServer* mediaServer, header *msg)
 {
-    int ret = 0;
     int sockfd,n ;
     struct sockaddr_in serv_addr;
     struct hostent *server;
@@ -337,9 +328,9 @@ static void clearChannelTag(struct rtpServer *server, int serverChanID)
 		}
 	}
 }
-void closeChannel(int chanID, struct rtpServer* mediaServer)
+
+int closeChannel(int chanID, struct rtpServer* mediaServer)
 {
-    int ret = 0;
     int sockfd,n ;
     struct sockaddr_in serv_addr;
     struct hostent *server;
@@ -392,12 +383,12 @@ void setupRTPServers()
 	rtpServers.numServers = 1;
 	rtpServers.server = (struct rtpServer*)malloc(sizeof(struct rtpServer));
 
-	rtpServers.server[0].minPort = 32000;
+	rtpServers.server[0].minPort = MIN_PORT_NO;
 	rtpServers.server[0].numActiveChannels = 0;
 
 	for(i=0;i<CHANNELS_PER_SERVER;i++)
 		rtpServers.server[0].portActive[i] = 0;
-	strcpy(rtpServers.server[0].ip,"10.0.0.5");
+	strcpy(rtpServers.server[0].ip,MY_IP_ADDRESS);
 
 }
 
@@ -413,7 +404,6 @@ int getFreePort(struct rtpServer *server)
 			server->portActive[i] = 1;
 			break;
 		}
-
 	}
 	return ret;
 }

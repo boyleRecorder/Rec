@@ -1,4 +1,5 @@
 
+OPTS=-g -Wall
 OBJS=main.o server.o wav.o g711.o
 
 recServer: $(OBJS) 
@@ -6,13 +7,13 @@ recServer: $(OBJS)
 
 
 g711.o : g711.c 
-	gcc -c g711.c
+	gcc -c $(OPTS) g711.c
 wav.o : wav.c 
-	gcc -c wav.c
+	gcc -c $(OPTS) wav.c
 server.o : server.c 
-	gcc -c server.c
+	gcc -c $(OPTS) server.c
 main.o : main.c 
-	gcc -c main.c
+	gcc -c $(OPTS) main.c
 
 
 clean :
