@@ -8,10 +8,12 @@ This code is LGPL'ed
 
 #define CHANNELS_PER_SERVER     500
 #define COMMS_PORT              12345 
-#define MY_IP_ADDRESS           "127.0.0.1"
 #define MIN_PORT_NO		32000
 
-enum codecList {G711A,G711U} ;
+#define CONFIG_FILE		"config.ini"
+#define RTP_HEADER		12
+
+#include "wav.h"
 
 enum channelCreationMessages {CHANNEL_CREATED,CHANNEL_CREATION_FAILED};
 
@@ -33,7 +35,7 @@ struct callBacks
         /**
 	  Called when the channel is created.
 	*/
-	void (*channelCreated)(int portNum, char *);
+	void (*channelCreated)(int portNum, char *chanID, int codec);
 	
         /**
 	  Called when the channel is destroyed.
@@ -61,7 +63,7 @@ struct rtpServer
 {
 	char   ip[128];
 	int    minPort;
-	char   portActive[500];
+	char   portActive[CHANNELS_PER_SERVER];
 	int    numActiveChannels;
 };
 

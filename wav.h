@@ -12,13 +12,15 @@ typedef struct
 	char fileName[128];
 }FileSink;
 
-FileSink *createWavSink(char *, int channels);
+enum codecList {PCM,G711A,G711U} ;
+
+FileSink *createWavSink(char *, int channels, int codec);
 
 void closeWavSink(FileSink *);
 
 void writeData(FileSink *, char *, int );
 
-void writeHeader(char *buffer,int numChannels);
+void writeHeader(char *buffer,int numChannels,int codec);
 void closeHeader(char *buffer, int length);
 
 

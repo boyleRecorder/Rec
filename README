@@ -2,4 +2,4 @@
 To compile the sip/client copy/link the files header.h server.c siprtp.c into the directory 'pjproject-1.3/pjsip-apps/src/samples'. The run the pjsip-apps make file.
 
 
-The recServer can be compiled by simply doing a 'make'
+The recServer can be compiled by simply doing a 'make recServer'

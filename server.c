@@ -20,6 +20,7 @@
 #include <errno.h>
 
 #include "header.h"
+#include "iniparser.h"
 
 #define COMMAND_BACKLOG	10
 
@@ -149,7 +150,7 @@ static void serverReceivedPacket(int sock)
 		case CREATE_CHANNEL:
 			printf("Received create_channel.\n");	  
 			setupUDPSocket(myHeader.portNumber);   
-                        callBacks.channelCreated(myHeader.portNumber,myHeader.callID);
+                        callBacks.channelCreated(myHeader.portNumber,myHeader.callID,myHeader.codec);
 			break;
 		case DELETE_CHANNEL:
 			printf("Received delete_channel.\n");	 
@@ -379,17 +380,35 @@ int closeChannel(int chanID, struct rtpServer* mediaServer)
 
 void setupRTPServers()
 {
-	int i;
-	rtpServers.numServers = 1;
-	rtpServers.server = (struct rtpServer*)malloc(sizeof(struct rtpServer));
+	int i,j;
+	int numServers;
+	dictionary	*ini ;
+	int		b ;
+	char		*s ;
+	ini = iniparser_load(CONFIG_FILE);
+	if (ini==NULL) {
+		fprintf(stderr, "cannot parse file: %s\n", CONFIG_FILE);
+		return -1 ;
+	}
+	iniparser_dump(ini, stderr);
 
-	rtpServers.server[0].minPort = MIN_PORT_NO;
-	rtpServers.server[0].numActiveChannels = 0;
+	numServers = iniparser_getboolean(ini, "Rec Servers:numServers", -1);
+	printf("numServers:       [%d]\n", b);
 
-	for(i=0;i<CHANNELS_PER_SERVER;i++)
-		rtpServers.server[0].portActive[i] = 0;
-	strcpy(rtpServers.server[0].ip,MY_IP_ADDRESS);
 
+	rtpServers.server = (struct rtpServer*)malloc(sizeof(struct rtpServer)*numServers);
+	rtpServers.numServers = numServers;
+	
+	for(j=0;j<numServers;j++)
+	{
+		rtpServers.server[j].minPort = MIN_PORT_NO;
+		rtpServers.server[j].numActiveChannels = 0;
+
+		for(i=0;i<CHANNELS_PER_SERVER;i++)
+			rtpServers.server[j].portActive[i] = 0;
+		s = iniparser_getstring(ini,"Rec Servers:ipAddress","NULL");
+		strcpy(rtpServers.server[j].ip,s);
+	}
 }
 
 int getFreePort(struct rtpServer *server)

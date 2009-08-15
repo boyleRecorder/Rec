@@ -9,6 +9,8 @@
 
 #include "wav.h"
 
+#include "header.h"
+
 #define SECONDS 8 /* produce 10 seconds of noise */
 #define PI 3.14159265358979
 #define FREQUENCY 8000
@@ -29,25 +31,48 @@ static int put_little_long(char *t, unsigned int value)
 	return 4;
 }
 
-void writeHeader(char *buffer,int numChannels)
+void writeHeader(char *buffer,int numChannels,int codec)
 {
-        strcpy(buffer,"RIFF");
+	int chunkType;
+	int codecBlockSize = 1;
+	int bitsPerSample = 8;
+	
+	switch (codec)
+	{
+		case PCM:
+			chunkType = 1;
+			codecBlockSize = 2;
+			bitsPerSample = 16;
+			break;
+		case G711A:
+			chunkType = 6;
+			codecBlockSize = 1;
+			bitsPerSample = 8;
+			break;
+		case G711U:
+			chunkType = 7;
+			codecBlockSize = 1;
+			bitsPerSample = 8;
+			break;
+		default:
+			break;
+	}
+	strcpy(buffer,"RIFF");
 	/* total length will be put in later */
-        strcpy(buffer+8,"WAVE"); 
-        strcpy(buffer+12,"fmt ");
+	strcpy(buffer+8,"WAVE"); 
+	strcpy(buffer+12,"fmt ");
 
-        put_little_long(buffer+16,16); /* I know the length  of the fmt_ chunk
-	     		   */
-	put_little_short(buffer+20,1); /* chunk type is always one */
+	put_little_long(buffer+16,16); /* I know the length  of the fmt_ chunk */
+	put_little_short(buffer+20,chunkType); /* chunk type depends on codec */
 	put_little_short(buffer+22,numChannels); /* two channels */
 	put_little_long(buffer+24,FREQUENCY); /* samples per second */
-	put_little_long(buffer+28,FREQUENCY*2*numChannels); /* bytes per second */
-	put_little_short(buffer+32,2*numChannels); /* bytes pro sample (all channels) */
-	put_little_short(buffer+34,16); /* bits per sample */
+	put_little_long(buffer+28,FREQUENCY*codecBlockSize*numChannels); /* bytes per second */
+	put_little_short(buffer+32,codecBlockSize*numChannels); /* bytes pro sample (all channels) */
+	put_little_short(buffer+34,bitsPerSample); /* bits per sample */
 
 	/* data chunk, 8 bytes header and XXX bytes payload */
-        strcpy(buffer+36,"data"); 
-	
+	strcpy(buffer+36,"data"); 
+
 }
 
 /**
@@ -59,11 +84,11 @@ void closeHeader(char *buffer, int length)
 	put_little_long(buffer+4,length+8+16+8);
 }
 
-FileSink *createWavSink(char *fileName, int channels)
+FileSink *createWavSink(char *fileName, int channels,int codec)
 {
 	FileSink *sink = (FileSink*)malloc(sizeof(FileSink));
-        
-	writeHeader(sink->header,1);
+
+	writeHeader(sink->header,1,codec);
 
 	sink->stream = fopen(fileName,"w");
 	sink->length = 0;
@@ -77,7 +102,7 @@ void closeWavSink(FileSink *sink)
 	closeHeader(sink->header,sink->length);
 
 	fseek(sink->stream,0,0);
-	fwrite(sink->header,44,1,sink->stream);
+	fwrite(sink->header,44,sizeof(char),sink->stream);
 
 	fclose(sink->stream);
 	free(sink);
@@ -85,7 +110,7 @@ void closeWavSink(FileSink *sink)
 
 void writeData(FileSink *sink, char *data, int len)
 {
-	fwrite(data,len,1,sink->stream);
+	fwrite(data,len,sizeof(char),sink->stream);
 	sink->length += len;
 }
 
@@ -121,15 +146,15 @@ int main(void)
 	int fd;
 
 	FileSink *sink = createWavSink("Hello.wav",1);
-        writeHeader(buffer,1);
+	writeHeader(buffer,1);
 
 	len=fill_data(buffer+44,523,SECONDS); /* left channel, 450Hz sine */
 	writeData(sink,buffer+44,len);
-//	len+=fill_data(buffer+44+2,452,SECONDS); /* right channel, 452Hz sine */
-	
+	//	len+=fill_data(buffer+44+2,452,SECONDS); /* right channel, 452Hz sine */
+
 	closeHeader(buffer,len);
 	closeWavSink(sink);
-	
+
 	fd=open("test.wav", O_RDWR|O_CREAT, 0644);
 	write(fd,buffer,len+8+16+8+8);
 	close(fd);

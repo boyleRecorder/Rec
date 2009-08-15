@@ -7,9 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dictionary.h"
+#include "iniparser.h"
 #include "header.h"
 
-#include "server.c"
+//#include "server.c"
 
 
 
@@ -294,11 +296,8 @@ static pjsip_module mod_siprtp =
 /* Codec constants */
 struct codec audio_codecs[] = 
 {
-    { 8,  "PCMA", 8000, 64000, 20, "G.711 ALaw" },
     { 0,  "PCMU", 8000, 64000, 20, "G.711 ULaw" },
-    { 3,  "GSM",  8000, 13200, 20, "GSM" },
-    { 4,  "G723", 8000, 6400,  30, "G.723.1" },
-    { 18, "G729", 8000, 8000,  20, "G.729" },
+    { 8,  "PCMA", 8000, 64000, 20, "G.711 ALaw" },
 };
 
 
@@ -907,7 +906,7 @@ static pj_status_t init_options(int argc, char *argv[])
 	{ "call-report",    0, 0, 'R' },
 	{ "duration",	    1, 0, 'd' },
 	{ "auto-quit",	    0, 0, 'q' },
-	{ "local-port",	    1, 0, 'p' },
+//	{ "local-port",	    1, 0, 'p' },
 	{ "rtp-port",	    1, 0, 'r' },
 	{ "ip-addr",	    1, 0, 'i' },
 
@@ -947,10 +946,25 @@ static pj_status_t init_options(int argc, char *argv[])
     app.thread_count = 1;
     app.sip_port = 5060;
     app.rtp_start_port = RTP_START_PORT;
-    app.local_addr = pj_str(ip_addr);
+ //   app.local_addr = pj_str(ip_addr);
     app.log_level = 5;
     app.app_log_level = 3;
     app.log_filename = NULL;
+
+    {
+	dictionary	*ini ;
+	int		b ;
+	char		*s ;
+	ini = iniparser_load(CONFIG_FILE);
+	if (ini==NULL) {
+		fprintf(stderr, "cannot parse file: %s\n", CONFIG_FILE);
+		return -1 ;
+	}
+	iniparser_dump(ini, stderr);
+	s = iniparser_getstring(ini,"App Servers:clientIpAddress","NULL");
+	app.local_addr = pj_str(s);
+
+    }
 
     /* Default codecs: */
     app.audio_codec = audio_codecs[0];
@@ -1063,11 +1077,11 @@ static pj_status_t create_sdp( pj_pool_t *pool,
 
     struct rtpServer *tmp_server =  getFreeServer();
     call->server = tmp_server;
-    call->serverChanID = 1;
 
 
     header myHeader;
     strcpy(myHeader.buffer,"test message");
+//#warning "This needs to be fixed to handle arbitary codec."
     if(callID != NULL)
     {
 	    strcpy(myHeader.callID,callID);
@@ -1077,8 +1091,6 @@ static pj_status_t create_sdp( pj_pool_t *pool,
     printf("got free port: %i\n",myHeader.portNumber);
     myHeader.command = CREATE_CHANNEL;
     call->serverChanID = myHeader.portNumber;
-
-    requestChannel(call->serverChanID,call->server,&myHeader);
 
 
     /* Get transport info */
@@ -1143,6 +1155,20 @@ static pj_status_t create_sdp( pj_pool_t *pool,
 	pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
 	m->attr[m->attr_count++] = attr;
     }
+    switch (app.audio_codec.pt)
+    {
+	    case 0:
+		    myHeader.codec = G711U;
+		    break;
+	    case 8:
+		    myHeader.codec = G711A;
+		    break;
+    }
+
+
+
+    requestChannel(call->serverChanID,call->server,&myHeader);
+
 
     /* Add sendrecv attribute. */
     attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
@@ -1884,8 +1910,6 @@ static void print_avg_stat(void)
 
 }
 
-
-#include "siprtp_report.c"
 
 
 static void list_calls()
